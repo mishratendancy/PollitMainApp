@@ -5,8 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../theme/pollit_theme.dart';
 import '../../providers/auth_provider.dart';
-import '../pollit_home_page.dart';
-import '../app_shell.dart';
+import 'topic_selection_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -120,7 +119,7 @@ class _AuthScreenState extends State<AuthScreen>
       }
       
       if (mounted) {
-        _goToHome();
+        _goToTopics();
       }
     } catch (e) {
       if (mounted) {
@@ -148,7 +147,7 @@ class _AuthScreenState extends State<AuthScreen>
       await authProvider.signInWithGoogle();
       
       if (mounted) {
-        _goToHome();
+        _goToTopics();
       }
     } catch (e) {
       if (mounted) {
@@ -167,13 +166,13 @@ class _AuthScreenState extends State<AuthScreen>
     }
   }
 
-  void _goToHome() {
+  void _goToTopics() {
     HapticFeedback.mediumImpact();
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 700),
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const AppShell(),
+            const TopicSelectionScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(
@@ -571,7 +570,7 @@ class _AuthScreenState extends State<AuthScreen>
                                 onPressed: _isSubmitting ? null : _submit,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: PollitColors.accent,
-                                  foregroundColor: Colors.white,
+                                  foregroundColor: Colors.black,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(28),
                                   ),
@@ -583,7 +582,7 @@ class _AuthScreenState extends State<AuthScreen>
                                         height: 24,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                                         ),
                                       )
                                     : const Text(
@@ -700,7 +699,7 @@ class _AuthScreenState extends State<AuthScreen>
                               size: 24,
                             ),
                             label: 'Facebook',
-                            onTap: _goToHome,
+                            onTap: _goToTopics,
                           ),
                           const SizedBox(height: 12),
                           _SocialButton(
@@ -710,7 +709,7 @@ class _AuthScreenState extends State<AuthScreen>
                               height: 22,
                             ),
                             label: 'X',
-                            onTap: _goToHome,
+                            onTap: _goToTopics,
                           ),
                         ],
                       ),

@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../theme/pollit_theme.dart';
-import 'topic_selection_screen.dart';
+import 'auth_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -21,21 +21,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   static const _pages = [
     _OnboardingPageData(
       label: 'Vote',
-      title: 'Every Vote\nIs Fair.',
-      subtitle:
-          'Unlike other platforms, the most popular\noptions don\'t jump to the top. See all\nchoices at a glance without bias.',
+      title: 'Every\nVote\nIs Fair.',
+      subtitle: 'See all choices at a glance, completely free from popularity bias.',
     ),
     _OnboardingPageData(
       label: 'Discover',
-      title: 'Vote to\nSee Results.',
-      subtitle:
-          'Can\'t see poll results until you vote.\nThis ensures genuine opinions—no\nbandwagon effect, just honest votes.',
+      title: 'Vote\nTo\nSee Results.',
+      subtitle: 'Honest opinions only. Results stay hidden until you cast your vote.',
     ),
     _OnboardingPageData(
       label: 'Connect',
-      title: 'Join Your\nCommunity.',
-      subtitle:
-          'Find communities that match your interests.\nFollow topics, join discussions, and shape\nconversations that matter to you.',
+      title: 'Join\nYour\nCommunity.',
+      subtitle: 'Follow topics and dive right into the conversations you care about.',
     ),
   ];
 
@@ -71,13 +68,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.dispose();
   }
 
-  void _navigateToTopics() {
-    Navigator.of(context).pushReplacement(
+  void _navigateToAuth() {
+    Navigator.of(context).push(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 600),
         reverseTransitionDuration: const Duration(milliseconds: 400),
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const TopicSelectionScreen(),
+            const AuthScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(
@@ -98,7 +95,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         curve: Curves.easeOutCubic,
       );
     } else {
-      _navigateToTopics();
+      _navigateToAuth();
     }
   }
 
@@ -114,8 +111,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-    final topPad = MediaQuery.of(context).padding.top;
 
     return Scaffold(
       backgroundColor: PollitColors.background,
@@ -137,82 +132,76 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ),
               ),
 
-
               // === CONTENT ===
               Positioned.fill(
-                child: Column(
-                  children: [
-                    SizedBox(height: topPad + 16),
-
-                    // Top bar: Logo + Skip
-                    Opacity(
-                      opacity: _fadeIn.value,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          children: [
-                            Text(
-                              'Pollit',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: _navigateToTopics,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  color: Colors.white.withValues(alpha: 0.06),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.08),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Skip',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      // Top bar: Editorial Header + Skip
+                      Opacity(
+                        opacity: _fadeIn.value,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'POLLIT',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 2.0,
                                 ),
                               ),
-                            ),
-                          ],
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: _navigateToAuth,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'SKIP',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Glow space (upper half is just the gradient)
-                    const Spacer(flex: 3),
-
-                    // Page label pill
-                    Opacity(
-                      opacity: _fadeIn.value,
-                      child: Transform.translate(
-                        offset: Offset(0, _slideUp.value * 0.3),
-                        child: _buildPageContent(),
+                      // Page Content (Giant Typography)
+                      Expanded(
+                        child: Opacity(
+                          opacity: _fadeIn.value,
+                          child: _buildPageContent(),
+                        ),
                       ),
-                    ),
 
-                    const Spacer(flex: 1),
-
-                    // Bottom navigation
-                    Opacity(
-                      opacity: _fadeIn.value,
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(24, 0, 24, bottomPad + 20),
-                        child: _buildBottomNav(),
+                      // Bottom navigation
+                      Opacity(
+                        opacity: _fadeIn.value,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                          child: _buildBottomNav(),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -223,250 +212,118 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildPageContent() {
-    return SizedBox(
-      height: 260,
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: _pages.length,
-        onPageChanged: (i) => setState(() => _currentPage = i),
-        itemBuilder: (context, index) {
-          final data = _pages[index];
+    return PageView.builder(
+      controller: _pageController,
+      itemCount: _pages.length,
+      onPageChanged: (i) => setState(() => _currentPage = i),
+      itemBuilder: (context, index) {
+        final data = _pages[index];
 
-          return AnimatedBuilder(
-            animation: _pageController,
-            builder: (context, child) {
-              double parallax = 0;
-              if (_pageController.position.haveDimensions) {
-                parallax = (_pageController.page ?? 0) - index;
-              }
-              final opacity = (1 - parallax.abs() * 0.5).clamp(0.0, 1.0);
+        return AnimatedBuilder(
+          animation: _pageController,
+          builder: (context, child) {
+            double parallax = 0;
+            if (_pageController.position.haveDimensions) {
+              parallax = (_pageController.page ?? 0) - index;
+            }
+            final opacity = (1 - parallax.abs() * 0.6).clamp(0.0, 1.0);
 
-              return Opacity(
-                opacity: opacity,
-                child: Transform.translate(
-                  offset: Offset(parallax * -30, 0),
-                  child: child,
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Title
-                  Text(
-                    data.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 38,
-                      fontWeight: FontWeight.w800,
-                      height: 1.08,
-                      letterSpacing: -1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    data.subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFFD8D8D8),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      height: 1.6,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                ],
+            return Opacity(
+              opacity: opacity,
+              child: Transform.translate(
+                offset: Offset(parallax * -60, 0), // Stronger parallax
+                child: child,
               ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Stack(
+              children: [
+                // Giant Title and Subtitle at bottom right
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Editorial Title (Last line is bold)
+                      ...data.title.toUpperCase().split('\n').asMap().entries.map((entry) {
+                        final isLast = entry.key == data.title.split('\n').length - 1;
+                        return Text(
+                          entry.value,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 48,
+                            fontWeight: isLast ? FontWeight.w800 : FontWeight.w300,
+                            height: 1.0,
+                            letterSpacing: isLast ? -1.5 : -1.0,
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 20),
+                      // Subtitle
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.70,
+                        child: Text(
+                          data.subtitle,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontSize: 13,
+                            height: 1.5,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
-  double _swipeOffset = 0;
-  bool _swiping = false;
-  bool _swipeCompleted = false;
-
   Widget _buildBottomNav() {
-    const double pillHeight = 60;
-    const double thumbSize = 48;
-    const double thumbPad = 6;
     final isLast = _currentPage == _pages.length - 1;
-    final label = isLast ? 'Swipe to get started' : 'Swipe to continue';
+    final label = isLast ? 'Get started' : 'Continue';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final trackWidth = constraints.maxWidth;
-            final maxOffset = trackWidth - thumbSize - thumbPad * 2;
-            final progress = maxOffset > 0
-                ? (_swipeOffset / maxOffset).clamp(0.0, 1.0)
-                : 0.0;
-
-            final bgAlpha = 0.08 - (progress * 0.06);
-            final fillAlpha = progress * 0.15;
-            final labelOpacity =
-                _swiping ? (1.0 - progress).clamp(0.0, 0.75) : 0.75;
-
-            return GestureDetector(
-              onHorizontalDragStart: (_) {
-                setState(() {
-                  _swiping = true;
-                  _swipeCompleted = false;
-                });
-              },
-              onHorizontalDragUpdate: (details) {
-                setState(() {
-                  _swipeOffset =
-                      (_swipeOffset + details.delta.dx).clamp(0.0, maxOffset);
-                });
-              },
-              onHorizontalDragEnd: (_) {
-                if (_swipeOffset > maxOffset * 0.7) {
-                  setState(() {
-                    _swipeOffset = maxOffset;
-                    _swipeCompleted = true;
-                  });
-                  Future.delayed(const Duration(milliseconds: 400), () {
-                    _nextPage();
-                    if (mounted) {
-                      setState(() {
-                        _swipeOffset = 0;
-                        _swiping = false;
-                        _swipeCompleted = false;
-                      });
-                    }
-                  });
-                } else {
-                  setState(() {
-                    _swipeOffset = 0;
-                    _swiping = false;
-                  });
-                }
-              },
-              child: AnimatedContainer(
-                duration: _swiping
-                    ? Duration.zero
-                    : const Duration(milliseconds: 400),
-                curve: Curves.easeOutCubic,
-                height: pillHeight,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(pillHeight / 2),
-                  color: Colors.white.withValues(alpha: bgAlpha),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.10),
-                  ),
-                ),
-                child: Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [
-                    // Filled track behind thumb
-                    AnimatedPositioned(
-                      duration: _swiping
-                          ? Duration.zero
-                          : const Duration(milliseconds: 350),
-                      curve: Curves.easeOutCubic,
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: thumbPad * 2 + thumbSize + _swipeOffset,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(pillHeight / 2),
-                          color: PollitColors.accent
-                              .withValues(alpha: fillAlpha),
-                        ),
-                      ),
-                    ),
-                    // Label text
-                    Center(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        child: Opacity(
-                          key: ValueKey('$label$_swiping'),
-                          opacity: labelOpacity,
-                          child: Text(
-                            label,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Draggable thumb
-                    AnimatedPositioned(
-                      duration: _swiping
-                          ? Duration.zero
-                          : const Duration(milliseconds: 350),
-                      curve: Curves.easeOutCubic,
-                      left: thumbPad + _swipeOffset,
-                      top: thumbPad,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: thumbSize,
-                        height: thumbSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _swipeCompleted
-                              ? PollitColors.accent
-                              : isLast
-                                  ? PollitColors.accent
-                                  : Color.lerp(
-                                      Colors.white.withValues(alpha: 0.12),
-                                      PollitColors.accent,
-                                      progress,
-                                    ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: PollitColors.accent
-                                  .withValues(alpha: 0.15 + progress * 0.35),
-                              blurRadius: 12 + progress * 8,
-                            ),
-                          ],
-                        ),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          switchInCurve: Curves.easeOutBack,
-                          transitionBuilder: (child, anim) {
-                            return ScaleTransition(
-                              scale: anim,
-                              child: FadeTransition(
-                                opacity: anim,
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: _swipeCompleted
-                              ? const Icon(
-                                  Icons.check_rounded,
-                                  key: ValueKey('tick'),
-                                  color: Colors.white,
-                                  size: 24,
-                                )
-                              : const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  key: ValueKey('arrow'),
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+        GestureDetector(
+          onTap: () {
+            if (isLast) {
+              _navigateToAuth();
+            } else {
+              _nextPage();
+            }
           },
+          child: Container(
+            width: double.infinity,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
         ),
 
         const SizedBox(height: 20),
@@ -483,7 +340,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
             GestureDetector(
-              onTap: _navigateToTopics,
+              onTap: _navigateToAuth,
               child: Text(
                 'Log in',
                 style: TextStyle(

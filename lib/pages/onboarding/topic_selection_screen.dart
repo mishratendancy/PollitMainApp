@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/pollit_theme.dart';
 import 'dart:ui';
-import 'auth_screen.dart';
+import '../app_shell.dart';
 
 class TopicSelectionScreen extends StatefulWidget {
   const TopicSelectionScreen({super.key});
@@ -93,7 +93,7 @@ class _TopicSelectionScreenState extends State<TopicSelectionScreen>
         transitionDuration: const Duration(milliseconds: 600),
         reverseTransitionDuration: const Duration(milliseconds: 400),
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const AuthScreen(),
+            const AppShell(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           final slide = Tween<Offset>(
             begin: const Offset(1, 0),
@@ -344,7 +344,7 @@ class _TopicChipState extends State<_TopicChip> {
                   key: ValueKey(widget.isSelected),
                   size: 20,
                   color: widget.isSelected
-                      ? Colors.white
+                      ? Colors.black
                       : PollitColors.textSecondary,
                 ),
               ),
@@ -353,7 +353,7 @@ class _TopicChipState extends State<_TopicChip> {
                 widget.topic.label,
                 style: TextStyle(
                   color: widget.isSelected
-                      ? Colors.white
+                      ? Colors.black
                       : PollitColors.textPrimary,
                   fontSize: 14,
                   fontWeight: widget.isSelected ? FontWeight.w700 : FontWeight.w500,
