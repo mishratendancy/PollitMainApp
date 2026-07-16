@@ -20,6 +20,19 @@ class FirestoreService {
             .toList());
   }
 
+  /// Fetch a stream of polls created by a specific user
+  Stream<List<Poll>> getUserPollsStream(String uid, {int limit = 20}) {
+    return _db
+        .collectionGroup('polls')
+        .where('creatorUid', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Poll.fromMap(doc.data(), doc.id))
+            .toList());
+  }
+
   /// Fetch options for a specific poll
   Stream<List<PollOption>> getPollOptionsStream(String communitySlug, String pollId) {
     return _db

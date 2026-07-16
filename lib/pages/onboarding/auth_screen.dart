@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../theme/pollit_theme.dart';
 import '../../providers/auth_provider.dart';
 import 'topic_selection_screen.dart';
+import 'profile_setup_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -168,11 +169,15 @@ class _AuthScreenState extends State<AuthScreen>
 
   void _goToTopics() {
     HapticFeedback.mediumImpact();
+    
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isSetup = authProvider.userProfile?['profileSetupCompleted'] == true;
+    
     Navigator.of(context).pushAndRemoveUntil(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 700),
         pageBuilder: (context, animation, secondaryAnimation) =>
-            const TopicSelectionScreen(),
+            isSetup ? const TopicSelectionScreen() : const ProfileSetupScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(
             opacity: CurvedAnimation(

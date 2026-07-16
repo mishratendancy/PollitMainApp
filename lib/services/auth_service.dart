@@ -27,6 +27,21 @@ class AuthService {
     return null;
   }
 
+  /// Complete user profile setup
+  Future<void> updateUserProfileSetup(String uid, String displayName, String photoURL) async {
+    try {
+      await _db.collection('users').doc(uid).update({
+        'displayName': displayName,
+        'username': displayName.replaceAll(' ', '').toLowerCase(),
+        'photoURL': photoURL,
+        'profileSetupCompleted': true,
+      });
+    } catch (e) {
+      debugPrint('Error updating profile setup: $e');
+      rethrow;
+    }
+  }
+
   /// Sign up with email and password
   Future<firebase_auth.UserCredential> emailSignUp(
     String email,

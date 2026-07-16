@@ -4,6 +4,7 @@ import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import '../theme/pollit_theme.dart';
 import 'feed_screen.dart';
 import 'create_poll_screen.dart';
+import 'profile/profile_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -22,7 +23,7 @@ class _AppShellState extends State<AppShell> {
     const FeedScreen(),
     const CreatePollScreen(),
     const Center(child: Text('Inbox (Coming Soon)')),
-    const Center(child: Text('Profile (Coming Soon)')),
+    const ProfileScreen(),
   ];
 
   final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
@@ -53,7 +54,7 @@ class _AppShellState extends State<AppShell> {
         child: CurvedNavigationBar(
           key: _bottomNavigationKey,
           index: _currentIndex,
-          height: 60.0,
+          height: 72.0,
           items: <Widget>[
             Icon(
               _currentIndex == 0 ? Icons.home_filled : Icons.home_outlined,

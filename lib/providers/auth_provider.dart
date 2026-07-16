@@ -40,12 +40,27 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  Future<void> reloadProfile() async {
+    if (_user != null) {
+      _userProfile = await _authService.getUserProfile(_user!.uid);
+      notifyListeners();
+    }
+  }
+
+  Future<void> completeProfileSetup(String displayName, String photoURL) async {
+    if (_user != null) {
+      await _authService.updateUserProfileSetup(_user!.uid, displayName, photoURL);
+      await reloadProfile();
+    }
+  }
+
   Future<void> signIn(String email, String password) async {
     await _authService.emailSignIn(email, password);
   }
 
   Future<void> signInWithGoogle() async {
     await _authService.googleSignIn();
+    await reloadProfile();
   }
 
   Future<void> signUp(String email, String password, {String? fullName, String? username}) async {
@@ -55,6 +70,7 @@ class AuthProvider extends ChangeNotifier {
       fullName: fullName,
       username: username,
     );
+    await reloadProfile();
   }
 
   Future<void> resetPassword(String email) async {
