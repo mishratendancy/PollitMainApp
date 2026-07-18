@@ -5,8 +5,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../theme/pollit_theme.dart';
 import '../../providers/auth_provider.dart';
-import 'topic_selection_screen.dart';
-import 'profile_setup_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -119,8 +117,11 @@ class _AuthScreenState extends State<AuthScreen>
         await authProvider.signUp(email, password, username: username);
       }
       
+      // Don't navigate manually — pop back to AuthWrapper and let it
+      // react to the auth state change and route to the correct screen.
       if (mounted) {
-        _goToTopics();
+        HapticFeedback.mediumImpact();
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       if (mounted) {
@@ -147,8 +148,10 @@ class _AuthScreenState extends State<AuthScreen>
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.signInWithGoogle();
       
+      // Don't navigate manually — pop back to AuthWrapper.
       if (mounted) {
-        _goToTopics();
+        HapticFeedback.mediumImpact();
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       if (mounted) {
@@ -165,40 +168,6 @@ class _AuthScreenState extends State<AuthScreen>
         setState(() => _isSubmitting = false);
       }
     }
-  }
-
-  void _goToTopics() {
-    HapticFeedback.mediumImpact();
-    
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final isSetup = authProvider.userProfile?['profileSetupCompleted'] == true;
-    
-    Navigator.of(context).pushAndRemoveUntil(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 700),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            isSetup ? const TopicSelectionScreen() : const ProfileSetupScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-            ),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.03),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
-              child: child,
-            ),
-          );
-        },
-      ),
-      (_) => false,
-    );
   }
 
   Widget _buildToggleTab(String text, bool isActive) {
@@ -704,7 +673,7 @@ class _AuthScreenState extends State<AuthScreen>
                               size: 24,
                             ),
                             label: 'Facebook',
-                            onTap: _goToTopics,
+                            onTap: () {},  // Not implemented yet
                           ),
                           const SizedBox(height: 12),
                           _SocialButton(
@@ -714,7 +683,7 @@ class _AuthScreenState extends State<AuthScreen>
                               height: 22,
                             ),
                             label: 'X',
-                            onTap: _goToTopics,
+                            onTap: () {},  // Not implemented yet
                           ),
                         ],
                       ),

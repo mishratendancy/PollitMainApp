@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../models/poll.dart';
 import '../../providers/auth_provider.dart';
@@ -38,241 +39,225 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: PollitColors.background,
-      body: DefaultTabController(
-        length: 1,
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverAppBar(
-                expandedHeight: 220.0,
-                floating: false,
-                pinned: false,
-                backgroundColor: PollitColors.background,
-                elevation: 0,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Stack(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'My profile',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  Row(
                     children: [
-                      // Subtle gradient background at top
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: 180,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                PollitColors.accent.withValues(alpha: 0.15),
-                                PollitColors.background,
-                              ],
-                            ),
-                          ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: PollitColors.surfaceLight,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      ),
-                      SafeArea(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                        child: Row(
                           children: [
-                            // Premium Avatar
-                            Container(
-                              width: 90,
-                              height: 90,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: PollitColors.surfaceLight,
-                                border: Border.all(
-                                  color: PollitColors.accent.withValues(alpha: 0.6),
-                                  width: 2.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: PollitColors.accent.withValues(alpha: 0.25),
-                                    blurRadius: 20,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: photoURL != null
-                                    ? Image.network(
-                                        photoURL,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 50, color: PollitColors.textMuted),
-                                      )
-                                    : const Icon(Icons.person, size: 50, color: PollitColors.textMuted),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
+                            const Icon(Icons.water_drop_outlined, color: PollitColors.textMuted, size: 16),
+                            const SizedBox(width: 6),
                             Text(
-                              displayName,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: PollitColors.textPrimary,
-                                    letterSpacing: -0.5,
-                                  ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '@$username',
+                              inkmarks.toString(),
                               style: const TextStyle(
-                                color: PollitColors.textMuted,
+                                color: PollitColors.textPrimary,
+                                fontWeight: FontWeight.bold,
                                 fontSize: 14,
-                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 10),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: PollitColors.surfaceLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.settings_outlined, color: PollitColors.textPrimary, size: 20),
+                          onPressed: () {},
+                        ),
+                      ),
                     ],
                   ),
-                ),
+                ],
               ),
-              
-              // Stats Card wrapped in a SliverToBoxAdapter
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Avatar
+            Container(
+              width: 110,
+              height: 110,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: photoURL != null
+                  ? Image.network(
+                      photoURL,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 50, color: Colors.grey),
+                    )
+                  : const Icon(Icons.person, size: 50, color: Colors.grey),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Name
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  displayName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.verified, color: PollitColors.accent, size: 18),
+              ],
+            ),
+            const SizedBox(height: 6),
+            
+            // Stats
+            Text(
+              '$pollsCreated Polls · $voteCount Votes · @$username',
+              style: const TextStyle(
+                fontSize: 14,
+                color: PollitColors.textMuted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Pill Tabs
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
-                      color: PollitColors.surface,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: PollitColors.cardBorder),
+                      color: PollitColors.accent,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    child: const Row(
                       children: [
-                        _buildStatColumn('Polls', pollsCreated.toString()),
-                        _buildDivider(),
-                        _buildStatColumn('Votes', voteCount.toString()),
-                        _buildDivider(),
-                        _buildStatColumn('Inkmarks', inkmarks.toString()),
+                        Icon(Icons.layers, size: 16, color: Colors.black),
+                        SizedBox(width: 8),
+                        Text(
+                          'Polls',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ),
-              
-              // Sticky Tab Bar
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _SliverAppBarDelegate(
-                  TabBar(
-                    indicatorColor: PollitColors.accent,
-                    indicatorWeight: 3,
-                    labelColor: PollitColors.textPrimary,
-                    unselectedLabelColor: PollitColors.textMuted,
-                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    dividerColor: PollitColors.cardBorder,
-                    tabs: const [
-                      Tab(text: 'My Polls'),
-                    ],
-                  ),
-                ),
-              ),
-            ];
-          },
-          body: StreamBuilder<List<Poll>>(
-            stream: _firestoreService.getUserPollsStream(uid),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return Center(
-                  child: Text('Error loading polls.', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                );
-              }
-
-              final polls = snapshot.data ?? [];
-
-              if (polls.isEmpty) {
-                return const Center(
-                  child: Text(
-                    "You haven't created any polls yet.",
-                    style: TextStyle(color: PollitColors.textMuted, fontSize: 16),
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.only(top: 8, bottom: 100),
-                itemCount: polls.length,
-                itemBuilder: (context, index) {
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: PollCard(
-                      poll: polls[index],
-                      firestoreService: _firestoreService,
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: PollitColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(20),
                     ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.bolt, size: 16, color: PollitColors.textMuted),
+                        SizedBox(width: 8),
+                        Text(
+                          'Votes',
+                          style: TextStyle(
+                            color: PollitColors.textMuted,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Polls List
+            Expanded(
+              child: StreamBuilder<List<Poll>>(
+                stream: _firestoreService.getUserPollsStream(uid),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading polls.',
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      ),
+                    );
+                  }
+
+                  final polls = snapshot.data ?? [];
+
+                  if (polls.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.poll_outlined, size: 48, color: PollitColors.textMuted.withValues(alpha: 0.5)),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "You haven't created any polls yet.",
+                            style: TextStyle(color: PollitColors.textMuted, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 100), // Space for bottom nav
+                    itemCount: polls.length,
+                    separatorBuilder: (context, index) => const Divider(
+                      color: PollitColors.cardBorder,
+                      height: 1,
+                    ),
+                    itemBuilder: (context, index) {
+                      return PollCard(
+                        poll: polls[index],
+                        firestoreService: _firestoreService,
+                      );
+                    },
                   );
                 },
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
-  }
-
-  Widget _buildStatColumn(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: PollitColors.textPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            color: PollitColors.textMuted,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDivider() {
-    return Container(
-      height: 35,
-      width: 1,
-      color: PollitColors.cardBorder,
-    );
-  }
-}
-
-class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
-  _SliverAppBarDelegate(this._tabBar);
-
-  final TabBar _tabBar;
-
-  @override
-  double get minExtent => _tabBar.preferredSize.height;
-  @override
-  double get maxExtent => _tabBar.preferredSize.height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: PollitColors.background,
-      child: _tabBar,
-    );
-  }
-
-  @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
-    return false;
   }
 }

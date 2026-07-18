@@ -6,7 +6,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../theme/pollit_theme.dart';
-import 'topic_selection_screen.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -86,22 +85,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.completeProfileSetup(name, _currentPhotoUrl);
       
+      // AuthWrapper will automatically detect profileSetupCompleted == true
+      // and route to AppShell. Just pop back to root.
       if (mounted) {
         HapticFeedback.mediumImpact();
-        Navigator.of(context).pushAndRemoveUntil(
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 700),
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const TopicSelectionScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(
-                opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-                child: child,
-              );
-            },
-          ),
-          (_) => false,
-        );
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
       if (mounted) {

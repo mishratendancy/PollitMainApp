@@ -253,11 +253,9 @@ class _FeedScreenState extends State<FeedScreen>
                             onSelected: (value) async {
                               if (value == 'logout') {
                                 await Provider.of<AuthProvider>(context, listen: false).logout();
+                                // AuthWrapper will see user == null and show OnboardingScreen
                                 if (mounted) {
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(builder: (_) => const AuthScreen()),
-                                    (_) => false,
-                                  );
+                                  Navigator.of(context).popUntil((route) => route.isFirst);
                                 }
                               }
                             },

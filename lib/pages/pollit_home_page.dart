@@ -105,10 +105,7 @@ class _PollitHomePageState extends State<PollitHomePage>
               if (value == 'logout') {
                 await Provider.of<AuthProvider>(context, listen: false).logout();
                 if (mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const AuthScreen()),
-                    (_) => false,
-                  );
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                 }
               }
             },
