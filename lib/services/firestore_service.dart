@@ -7,6 +7,9 @@ import 'package:flutter/foundation.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  /// Centralized helper to generate a consistent key for a poll vote
+  static String buildVoteKey(String communitySlug, String pollId) => '${communitySlug}_$pollId';
+
   /// Fetch a stream of the latest polls across all communities (global feed)
   Stream<List<Poll>> getGlobalFeedStream({int limit = 20}) {
     // Note: To query across all subcollections 'polls', we use a collectionGroup query
@@ -47,8 +50,8 @@ class FirestoreService {
             .toList());
   }
 
-  /// Check if the user has already voted on this poll
-  Future<bool> hasUserVoted(String communitySlug, String pollId, String uid) async {
+  /// Check if the user has already voted on this poll, returns optionId if voted
+  Future<String?> getUserVoteOptionId(String communitySlug, String pollId, String uid) async {
     final doc = await _db
         .collection('communities')
         .doc(communitySlug)
@@ -57,7 +60,31 @@ class FirestoreService {
         .collection('votes')
         .doc(uid)
         .get();
-    return doc.exists;
+    if (doc.exists && doc.data() != null) {
+      return doc.data()!['optionId'] as String?;
+    }
+    return null;
+  }
+
+  /// Stream all of the user's voted polls and their selected optionIds
+  Stream<Map<String, String>> getUserVotedPollsStream(String uid) {
+    return _db
+        .collection('users')
+        .doc(uid)
+        .collection('votedPollRefs')
+        .snapshots()
+        .map((snapshot) {
+      final map = <String, String>{};
+      for (final doc in snapshot.docs) {
+        if (doc.data().containsKey('optionId')) {
+          map[doc.id] = doc.data()['optionId'] as String;
+        } else {
+          // Legacy vote (voted before the optionId update)
+          map[doc.id] = 'LEGACY_UNKNOWN';
+        }
+      }
+      return map;
+    });
   }
 
   /// Submit a vote using a batch write to satisfy Firestore rules
@@ -112,8 +139,9 @@ class FirestoreService {
         .collection('users')
         .doc(uid)
         .collection('votedPollRefs')
-        .doc('${communitySlug}_$pollId');
+        .doc(buildVoteKey(communitySlug, pollId));
     batch.set(votedPollRef, {
+      'optionId': optionId,
       'votedAt': DateTime.now().millisecondsSinceEpoch,
     });
 

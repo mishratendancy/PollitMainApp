@@ -44,7 +44,10 @@ void main() async {
         // lazy: false forces AuthProvider to be created immediately,
         // so its auth stream listener is active before any widget reads it.
         ChangeNotifierProvider(create: (_) => AuthProvider(), lazy: false),
-        ChangeNotifierProvider(create: (_) => FeedProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, FeedProvider>(
+          create: (_) => FeedProvider(),
+          update: (_, auth, feed) => feed!..updateAuth(auth),
+        ),
       ],
       child: const PollitApp(),
     ),

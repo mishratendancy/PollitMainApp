@@ -4,6 +4,7 @@ import '../models/poll.dart';
 import '../models/option.dart';
 import '../services/firestore_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/feed_provider.dart';
 import '../theme/pollit_theme.dart';
 
 class PollCard extends StatefulWidget {
@@ -23,8 +24,6 @@ class PollCard extends StatefulWidget {
 class _PollCardState extends State<PollCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _voteAnimController;
-  bool _hasVoted = false;
-  String? _selectedOptionId;
   bool _isVoting = false;
 
   @override
@@ -34,35 +33,22 @@ class _PollCardState extends State<PollCard>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _checkVoteStatus();
-  }
-
-  Future<void> _checkVoteStatus() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    if (auth.user != null) {
-      final voted = await widget.firestoreService.hasUserVoted(
-        widget.poll.community, 
-        widget.poll.id, 
-        auth.user!.uid,
-      );
-      if (mounted && voted) {
-        setState(() {
-          _hasVoted = true;
-        });
-        _voteAnimController.value = 1.0;
-      }
-    }
   }
 
   Future<void> _handleVote(String optionId) async {
-    if (_hasVoted || _isVoting) return;
+    final feedProvider = Provider.of<FeedProvider>(context, listen: false);
+    final hasVoted = feedProvider.getVotedOptionId(widget.poll.community, widget.poll.id) != null;
+    if (hasVoted || _isVoting) return;
+    
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.user == null) return;
 
     setState(() {
       _isVoting = true;
-      _selectedOptionId = optionId;
     });
+
+    feedProvider.recordOptimisticVote(widget.poll.community, widget.poll.id, optionId);
+    _voteAnimController.forward();
 
     try {
       await widget.firestoreService.submitVote(
@@ -74,16 +60,13 @@ class _PollCardState extends State<PollCard>
       
       if (mounted) {
         setState(() {
-          _hasVoted = true;
           _isVoting = false;
         });
-        _voteAnimController.forward();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isVoting = false;
-          _selectedOptionId = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to vote. Please try again.')),
@@ -100,6 +83,13 @@ class _PollCardState extends State<PollCard>
 
   @override
   Widget build(BuildContext context) {
+    final feedProvider = Provider.of<FeedProvider>(context);
+    final votedOptionId = feedProvider.getVotedOptionId(widget.poll.community, widget.poll.id);
+    final hasVoted = votedOptionId != null;
+
+    if (hasVoted && !_isVoting && _voteAnimController.value == 0.0) {
+      _voteAnimController.value = 1.0;
+    }
     final theme = Theme.of(context);
     final date = DateTime.fromMillisecondsSinceEpoch(widget.poll.createdAt);
     final diff = DateTime.now().difference(date);
@@ -200,7 +190,7 @@ class _PollCardState extends State<PollCard>
 
               return Column(
                 children: options.map((o) {
-                  final isThisSelected = _selectedOptionId == o.id;
+                  final isThisSelected = votedOptionId == o.id;
                   final totalVotes = widget.poll.voteCount;
                   final percent = totalVotes == 0 
                     ? 0.0 
@@ -212,9 +202,9 @@ class _PollCardState extends State<PollCard>
                       option: o,
                       percent: percent,
                       selected: isThisSelected,
-                      hasVoted: _hasVoted,
+                      hasVoted: hasVoted,
                       isVoting: _isVoting,
-                      onTap: _hasVoted ? null : () => _handleVote(o.id),
+                      onTap: hasVoted ? null : () => _handleVote(o.id),
                       animController: _voteAnimController,
                     ),
                   );
@@ -310,7 +300,7 @@ class _OptionTile extends StatelessWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: PollitColors.surfaceLight.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   );
@@ -325,7 +315,7 @@ class _OptionTile extends StatelessWidget {
                 color: PollitColors.cardBorder,
                 width: 1,
               ),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(

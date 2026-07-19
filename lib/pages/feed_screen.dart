@@ -133,7 +133,7 @@ class _FeedScreenState extends State<FeedScreen>
                               margin: const EdgeInsets.symmetric(horizontal: 16),
                               decoration: BoxDecoration(
                                 color: PollitColors.surface,
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: PollitColors.cardBorder),
                               ),
                               child: PollCard(
