@@ -83,15 +83,18 @@ class _AppShellState extends State<AppShell> {
                 
                 Widget avatarWidget;
                 if (resolvedUrl != null) {
-                  avatarWidget = Image.network(
-                    resolvedUrl,
-                    width: 26,
-                    height: 26,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(
-                      _currentIndex == 3 ? Icons.person : Icons.person_outline,
-                      size: 26,
-                      color: _currentIndex == 3 ? const Color(0xFF18181b) : Colors.white,
+                  avatarWidget = Transform.scale(
+                    scale: 1.15, // Zooms in just enough to hide padding without cropping the head
+                    child: Image.network(
+                      resolvedUrl,
+                      width: 34,
+                      height: 34,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(
+                        _currentIndex == 3 ? Icons.person : Icons.person_outline,
+                        size: 26,
+                        color: _currentIndex == 3 ? const Color(0xFF18181b) : Colors.white,
+                      ),
                     ),
                   );
                 } else {
@@ -103,8 +106,8 @@ class _AppShellState extends State<AppShell> {
                 }
 
                 return Container(
-                  width: 28,
-                  height: 28,
+                  width: 34,
+                  height: 34,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
