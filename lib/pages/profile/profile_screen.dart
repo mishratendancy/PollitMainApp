@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/pollit_theme.dart';
 import '../../widgets/poll_card.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -82,13 +83,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(width: 12),
                       Container(
+                        width: 40,
+                        height: 40,
                         decoration: const BoxDecoration(
                           color: PollitColors.surfaceLight,
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.settings_outlined, color: PollitColors.textPrimary, size: 20),
-                          onPressed: () {},
+                          icon: const Icon(Icons.settings_outlined, color: PollitColors.textPrimary, size: 22),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                            );
+                          },
                         ),
                       ),
                     ],

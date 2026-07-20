@@ -11,6 +11,7 @@ import '../models/option.dart';
 import '../widgets/app_sidebar.dart';
 import 'onboarding/auth_screen.dart';
 import '../widgets/poll_card.dart';
+import '../widgets/poll_card_skeleton.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -62,7 +63,77 @@ class _FeedScreenState extends State<FeedScreen>
             child: Consumer<FeedProvider>(
               builder: (context, feedProvider, child) {
                 if (feedProvider.isLoading && feedProvider.polls.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
+                  return ListView.builder(
+                    padding: EdgeInsets.fromLTRB(4, topPadding + 80, 4, 24),
+                    itemCount: 4,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 24, left: 12, right: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: PollitColors.background,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                              color: PollitColors.accent.withValues(alpha: 0.5),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.search, color: PollitColors.accent.withValues(alpha: 0.8), size: 20),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Search Poll-it',
+                                style: TextStyle(
+                                  color: PollitColors.textSecondary,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      final isFirstPoll = index == 1;
+                      final isLastPoll = index == 3;
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: isFirstPoll ? const BorderSide(color: PollitColors.cardBorder) : BorderSide.none,
+                            left: const BorderSide(color: PollitColors.cardBorder),
+                            right: const BorderSide(color: PollitColors.cardBorder),
+                            bottom: isLastPoll ? const BorderSide(color: PollitColors.cardBorder) : BorderSide.none,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            if (isFirstPoll) const SizedBox(height: 16),
+                            Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: PollitColors.surface,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: PollitColors.cardBorder),
+                              ),
+                              child: const PollCardSkeleton(),
+                            ),
+                            if (!isLastPoll)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: PollitColors.cardBorder,
+                                ),
+                              ),
+                            if (isLastPoll) const SizedBox(height: 16),
+                          ],
+                        ),
+                      );
+                    },
+                  );
                 }
                 
                 if (feedProvider.error != null) {
@@ -210,88 +281,7 @@ class _FeedScreenState extends State<FeedScreen>
                               ),
                             ),
                           ),
-                          Consumer<AuthProvider>(
-                            builder: (context, authProvider, _) {
-                              final profile = authProvider.userProfile;
-                              String? resolvedUrl = profile?['photoURL'] as String?;
-                              if (resolvedUrl != null && resolvedUrl.contains('api.dicebear.com') && resolvedUrl.contains('/svg')) {
-                                resolvedUrl = resolvedUrl.replaceAll('/svg', '/png');
-                              }
-                              
-                              Widget avatarWidget;
-                              if (resolvedUrl != null) {
-                                avatarWidget = Image.network(
-                                  resolvedUrl,
-                                  width: 32,
-                                  height: 32,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.account_circle_outlined, color: PollitColors.textPrimary),
-                                );
-                              } else {
-                                avatarWidget = const Icon(Icons.account_circle_outlined, color: PollitColors.textPrimary);
-                              }
-
-                              return PopupMenuButton<String>(
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: PollitColors.surfaceLight,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: PollitColors.cardBorder, width: 1.5),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: avatarWidget,
-                                ),
-                                tooltip: 'Profile & settings',
-                                color: PollitColors.surface,
-                            offset: const Offset(0, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(color: PollitColors.cardBorder, width: 0.5),
-                            ),
-                            onSelected: (value) async {
-                              if (value == 'logout') {
-                                await Provider.of<AuthProvider>(context, listen: false).logout();
-                                // AuthWrapper will see user == null and show OnboardingScreen
-                                if (mounted) {
-                                  Navigator.of(context).popUntil((route) => route.isFirst);
-                                }
-                              }
-                            },
-                            itemBuilder: (context) {
-                              final profile = Provider.of<AuthProvider>(context, listen: false).userProfile;
-                              final username = profile?['username'] ?? 'User';
-                              return [
-                                PopupMenuItem(
-                                  enabled: false,
-                                  child: Text(
-                                    '@$username',
-                                    style: const TextStyle(
-                                      color: PollitColors.textMuted,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                const PopupMenuDivider(),
-                                const PopupMenuItem(
-                                  value: 'profile',
-                                  child: Text('Profile'),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'logout',
-                                  child: Text(
-                                    'Log out',
-                                    style: TextStyle(color: Colors.redAccent),
-                                  ),
-                                ),
-                              ];
-                            },
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 4),
-                    ],
+                        ],
                       ),
                     ),
                   ),
@@ -304,5 +294,3 @@ class _FeedScreenState extends State<FeedScreen>
     );
   }
 }
-
-

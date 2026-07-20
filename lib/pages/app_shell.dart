@@ -5,6 +5,8 @@ import '../theme/pollit_theme.dart';
 import 'feed_screen.dart';
 import 'create_poll_screen.dart';
 import 'profile/profile_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -71,10 +73,49 @@ class _AppShellState extends State<AppShell> {
               size: 26,
               color: _currentIndex == 2 ? const Color(0xFF18181b) : Colors.white,
             ),
-            Icon(
-              _currentIndex == 3 ? Icons.person : Icons.person_outline,
-              size: 26,
-              color: _currentIndex == 3 ? const Color(0xFF18181b) : Colors.white,
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, _) {
+                final profile = authProvider.userProfile;
+                String? resolvedUrl = profile?['photoURL'] as String?;
+                if (resolvedUrl != null && resolvedUrl.contains('api.dicebear.com') && resolvedUrl.contains('/svg')) {
+                  resolvedUrl = resolvedUrl.replaceAll('/svg', '/png');
+                }
+                
+                Widget avatarWidget;
+                if (resolvedUrl != null) {
+                  avatarWidget = Image.network(
+                    resolvedUrl,
+                    width: 26,
+                    height: 26,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Icon(
+                      _currentIndex == 3 ? Icons.person : Icons.person_outline,
+                      size: 26,
+                      color: _currentIndex == 3 ? const Color(0xFF18181b) : Colors.white,
+                    ),
+                  );
+                } else {
+                  avatarWidget = Icon(
+                    _currentIndex == 3 ? Icons.person : Icons.person_outline,
+                    size: 26,
+                    color: _currentIndex == 3 ? const Color(0xFF18181b) : Colors.white,
+                  );
+                }
+
+                return Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _currentIndex == 3 ? const Color(0xFF18181b) : Colors.white,
+                      width: _currentIndex == 3 ? 1.5 : 1.0,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: avatarWidget,
+                );
+              },
             ),
           ],
           color: const Color(0xFF18181b),
