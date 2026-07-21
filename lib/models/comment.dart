@@ -10,6 +10,7 @@ class PollComment {
   final int score;
   final int upvoteCount;
   final int downvoteCount;
+  final String? parentId;
 
   PollComment({
     required this.id,
@@ -23,6 +24,7 @@ class PollComment {
     this.score = 0,
     this.upvoteCount = 0,
     this.downvoteCount = 0,
+    this.parentId,
   });
 
   factory PollComment.fromMap(Map<String, dynamic> map, String id) {
@@ -38,6 +40,7 @@ class PollComment {
       score: map['score'] ?? 0,
       upvoteCount: map['upvoteCount'] ?? 0,
       downvoteCount: map['downvoteCount'] ?? 0,
+      parentId: map['parentId'],
     );
   }
 
@@ -53,6 +56,7 @@ class PollComment {
       'score': score,
       'upvoteCount': upvoteCount,
       'downvoteCount': downvoteCount,
+      'parentId': parentId,
     };
   }
 }

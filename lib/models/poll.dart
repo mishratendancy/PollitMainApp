@@ -10,6 +10,7 @@ class Poll {
   final int createdAt;
   final bool? optionLock;
   final int? timeLock;
+  final int commentCount;
 
   Poll({
     required this.id,
@@ -23,6 +24,7 @@ class Poll {
     required this.createdAt,
     this.optionLock,
     this.timeLock,
+    this.commentCount = 0,
   });
 
   factory Poll.fromMap(Map<String, dynamic> map, String id) {
@@ -38,6 +40,7 @@ class Poll {
       createdAt: map['createdAt'] ?? 0,
       optionLock: map['optionLock'],
       timeLock: map['timeLock'],
+      commentCount: map['commentCount'] ?? 0,
     );
   }
 
@@ -53,6 +56,7 @@ class Poll {
       'createdAt': createdAt,
       'optionLock': optionLock,
       'timeLock': timeLock,
+      'commentCount': commentCount,
     };
   }
 }

@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/poll.dart';
 import '../models/option.dart';
 import '../models/community.dart';
+import '../models/comment.dart';
+import '../models/poll_view_data.dart';
 import 'package:flutter/foundation.dart';
 
 class FirestoreService {
@@ -21,6 +23,99 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs
             .map((doc) => Poll.fromMap(doc.data(), doc.id))
             .toList());
+  }
+
+  /// Future-based global feed fetching with options and vote status included
+  Future<Map<String, dynamic>> getGlobalFeedWithData({
+    required int limit,
+    DocumentSnapshot? startAfter,
+    String? uid,
+  }) async {
+    Query query = _db.collectionGroup('polls').orderBy('createdAt', descending: true).limit(limit);
+    
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+    
+    final querySnapshot = await query.get();
+    
+    final polls = querySnapshot.docs.map((doc) => Poll.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    
+    final viewDataFutures = polls.map((poll) async {
+      final optionsQuery = await _db
+          .collection('communities')
+          .doc(poll.community)
+          .collection('polls')
+          .doc(poll.id)
+          .collection('options')
+          .get();
+          
+      final options = optionsQuery.docs.map((doc) => PollOption.fromMap(doc.data(), doc.id)).toList();
+      
+      String? votedOptionId;
+      if (uid != null) {
+        final voteDoc = await _db
+            .collection('communities')
+            .doc(poll.community)
+            .collection('polls')
+            .doc(poll.id)
+            .collection('votes')
+            .doc(uid)
+            .get();
+            
+        if (voteDoc.exists && voteDoc.data() != null) {
+          votedOptionId = voteDoc.data()!['optionId'] as String?;
+        }
+      }
+      
+      return PollViewData(
+        poll: poll,
+        options: options,
+        votedOptionId: votedOptionId,
+      );
+    });
+    
+    final viewDataList = await Future.wait(viewDataFutures);
+    
+    return {
+      'viewDataList': viewDataList,
+      'lastDocument': querySnapshot.docs.isNotEmpty ? querySnapshot.docs.last : null,
+    };
+  }
+
+  /// Helper to get a PollViewData for a single poll
+  Future<PollViewData> getPollViewData(Poll poll, String? uid) async {
+    final optionsQuery = await _db
+        .collection('communities')
+        .doc(poll.community)
+        .collection('polls')
+        .doc(poll.id)
+        .collection('options')
+        .get();
+        
+    final options = optionsQuery.docs.map((doc) => PollOption.fromMap(doc.data(), doc.id)).toList();
+    
+    String? votedOptionId;
+    if (uid != null) {
+      final voteDoc = await _db
+          .collection('communities')
+          .doc(poll.community)
+          .collection('polls')
+          .doc(poll.id)
+          .collection('votes')
+          .doc(uid)
+          .get();
+          
+      if (voteDoc.exists && voteDoc.data() != null) {
+        votedOptionId = voteDoc.data()!['optionId'] as String?;
+      }
+    }
+    
+    return PollViewData(
+      poll: poll,
+      options: options,
+      votedOptionId: votedOptionId,
+    );
   }
 
   /// Fetch a stream of polls created by a specific user
@@ -48,6 +143,19 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs
             .map((doc) => PollOption.fromMap(doc.data(), doc.id))
             .toList());
+  }
+
+  /// Get total comments count using efficient aggregate query
+  Future<int> getCommentCount(String communitySlug, String pollId) async {
+    final snapshot = await _db
+        .collection('communities')
+        .doc(communitySlug)
+        .collection('polls')
+        .doc(pollId)
+        .collection('comments')
+        .count()
+        .get();
+    return snapshot.count ?? 0;
   }
 
   /// Check if the user has already voted on this poll, returns optionId if voted
@@ -213,5 +321,176 @@ class FirestoreService {
       debugPrint('Error creating poll: $e');
       rethrow;
     }
+  }
+
+  /// Add a new option to an existing poll
+  Future<String?> addOption({
+    required String communitySlug,
+    required String pollId,
+    required String optionText,
+    required String uid,
+  }) async {
+    if (optionText.trim().isEmpty) return null;
+    
+    final optionRef = _db
+        .collection('communities')
+        .doc(communitySlug)
+        .collection('polls')
+        .doc(pollId)
+        .collection('options')
+        .doc();
+        
+    await optionRef.set({
+      'text': optionText.trim(),
+      'voteCount': 0,
+      'addedByUid': uid,
+    });
+    
+    return optionRef.id;
+  }
+
+  /// Get a single poll stream
+  Stream<Poll> getPollStream(String communitySlug, String pollId) {
+    return _db
+        .collection('communities')
+        .doc(communitySlug)
+        .collection('polls')
+        .doc(pollId)
+        .snapshots()
+        .map((doc) => Poll.fromMap(doc.data() as Map<String, dynamic>, doc.id));
+  }
+
+  /// Get comments for a poll
+  Stream<List<PollComment>> getPollCommentsStream(String communitySlug, String pollId) {
+    return _db
+        .collection('communities')
+        .doc(communitySlug)
+        .collection('polls')
+        .doc(pollId)
+        .collection('comments')
+        .orderBy('createdAt', descending: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => PollComment.fromMap(doc.data(), doc.id))
+            .toList());
+  }
+
+  /// Add a comment
+  Future<void> addComment({
+    required String communitySlug,
+    required String pollId,
+    required String uid,
+    required String text,
+    String? parentId,
+  }) async {
+    final batch = _db.batch();
+
+    final commentRef = _db
+        .collection('communities')
+        .doc(communitySlug)
+        .collection('polls')
+        .doc(pollId)
+        .collection('comments')
+        .doc();
+
+    final userDoc = await _db.collection('users').doc(uid).get();
+    final authorName = userDoc.data()?['displayName'] ?? 'Anonymous';
+    final authorPhotoURL = userDoc.data()?['photoURL'];
+
+    batch.set(commentRef, {
+      'text': text,
+      'authorUid': uid,
+      'authorName': authorName,
+      'authorPhotoURL': authorPhotoURL,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+      'score': 0,
+      'upvoteCount': 0,
+      'downvoteCount': 0,
+      if (parentId != null) 'parentId': parentId,
+    });
+
+    // We no longer update a comment count in a subcollection, and we cannot update a 'commentCount' 
+    // field on the Poll itself because Firestore security rules only allow 'voteCount' updates.
+    // We fetch comment counts dynamically using count() aggregations instead.
+    
+    await batch.commit();
+  }
+
+  /// Submit comment vote
+  Future<int> getCommentVote(String communitySlug, String pollId, String commentId, String uid) async {
+    final doc = await _db
+        .collection('communities')
+        .doc(communitySlug)
+        .collection('polls')
+        .doc(pollId)
+        .collection('comments')
+        .doc(commentId)
+        .collection('votes')
+        .doc(uid)
+        .get();
+    
+    if (doc.exists && doc.data() != null) {
+      return doc.data()!['direction'] as int? ?? 0;
+    }
+    return 0;
+  }
+
+  /// Submit comment vote
+  Future<void> submitCommentVote({
+    required String communitySlug,
+    required String pollId,
+    required String commentId,
+    required String uid,
+    required int direction,
+    required int previousDirection,
+  }) async {
+    final batch = _db.batch();
+
+    final voteRef = _db
+        .collection('communities')
+        .doc(communitySlug)
+        .collection('polls')
+        .doc(pollId)
+        .collection('comments')
+        .doc(commentId)
+        .collection('votes')
+        .doc(uid);
+
+    final commentRef = _db
+        .collection('communities')
+        .doc(communitySlug)
+        .collection('polls')
+        .doc(pollId)
+        .collection('comments')
+        .doc(commentId);
+
+    if (direction == 0) {
+      // Remove vote
+      batch.delete(voteRef);
+    } else {
+      // Set vote
+      batch.set(voteRef, {
+        'direction': direction,
+        'votedAt': DateTime.now().millisecondsSinceEpoch,
+      });
+    }
+
+    // Update score
+    int upDiff = 0;
+    int downDiff = 0;
+
+    if (previousDirection == 1) upDiff -= 1;
+    if (previousDirection == -1) downDiff -= 1;
+
+    if (direction == 1) upDiff += 1;
+    if (direction == -1) downDiff += 1;
+
+    batch.update(commentRef, {
+      'upvoteCount': FieldValue.increment(upDiff),
+      'downvoteCount': FieldValue.increment(downDiff),
+      'score': FieldValue.increment(upDiff - downDiff),
+    });
+
+    await batch.commit();
   }
 }

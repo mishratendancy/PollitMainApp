@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../models/poll.dart';
+import '../../models/poll_view_data.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/pollit_theme.dart';
@@ -254,9 +255,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       height: 1,
                     ),
                     itemBuilder: (context, index) {
-                      return PollCard(
-                        poll: polls[index],
-                        firestoreService: _firestoreService,
+                      return FutureBuilder<PollViewData>(
+                        future: _firestoreService.getPollViewData(polls[index], uid),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 32),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          if (snapshot.hasError || !snapshot.hasData) {
+                            return const SizedBox(); // Handle error
+                          }
+                          return PollCard(
+                            pollData: snapshot.data!,
+                            firestoreService: _firestoreService,
+                          );
+                        }
                       );
                     },
                   );

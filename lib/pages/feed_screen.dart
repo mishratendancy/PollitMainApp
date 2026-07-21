@@ -33,6 +33,11 @@ class _FeedScreenState extends State<FeedScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..forward();
+    
+    // Initial fetch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<FeedProvider>(context, listen: false).refreshFeed();
+    });
   }
 
   @override
@@ -62,7 +67,7 @@ class _FeedScreenState extends State<FeedScreen>
             },
             child: Consumer<FeedProvider>(
               builder: (context, feedProvider, child) {
-                if (feedProvider.isLoading && feedProvider.polls.isEmpty) {
+                if (feedProvider.isLoading && feedProvider.feedData.isEmpty) {
                   return ListView.builder(
                     padding: EdgeInsets.fromLTRB(4, topPadding + 80, 4, 24),
                     itemCount: 4,
@@ -150,11 +155,14 @@ class _FeedScreenState extends State<FeedScreen>
                     parent: _entryController,
                     curve: Curves.easeOut,
                   ),
-                  child: ListView.builder(
-                    padding: EdgeInsets.fromLTRB(4, topPadding + 80, 4, 24),
-                    itemCount: feedProvider.polls.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
+                  child: RefreshIndicator(
+                    onRefresh: feedProvider.refreshFeed,
+                    color: PollitColors.accent,
+                    child: ListView.builder(
+                      padding: EdgeInsets.fromLTRB(4, topPadding + 80, 4, 24),
+                      itemCount: feedProvider.feedData.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 24, left: 12, right: 12),
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -184,7 +192,14 @@ class _FeedScreenState extends State<FeedScreen>
                       
                       final pollIndex = index - 1;
                       final isFirstPoll = pollIndex == 0;
-                      final isLastPoll = pollIndex == feedProvider.polls.length - 1;
+                      final isLastPoll = pollIndex == feedProvider.feedData.length - 1;
+
+                      // Load more threshold
+                      if (isLastPoll && !feedProvider.isLoadingMore && feedProvider.hasMore) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          feedProvider.loadMore();
+                        });
+                      }
 
                       return Container(
                         decoration: BoxDecoration(
@@ -208,10 +223,17 @@ class _FeedScreenState extends State<FeedScreen>
                                 border: Border.all(color: PollitColors.cardBorder),
                               ),
                               child: PollCard(
-                                poll: feedProvider.polls[pollIndex],
+                                pollData: feedProvider.feedData[pollIndex],
                                 firestoreService: _firestoreService,
                               ),
                             ),
+                            
+                            // Load more indicator
+                            if (isLastPoll && feedProvider.isLoadingMore)
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Center(child: CircularProgressIndicator()),
+                              ),
                             
                             // Divider between inner frames
                             if (!isLastPoll)
@@ -229,12 +251,13 @@ class _FeedScreenState extends State<FeedScreen>
                       );
                     },
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
+        ),
           
-          // The Animated Top Bar
+        // The Animated Top Bar
           Positioned(
             top: 0,
             left: 0,
