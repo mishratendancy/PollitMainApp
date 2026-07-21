@@ -111,6 +111,21 @@ class AuthProvider extends ChangeNotifier {
     await reloadProfile();
   }
 
+  Future<void> signInWithGithub() async {
+    await _authService.githubSignIn();
+    await reloadProfile();
+  }
+
+  Future<void> signInWithTwitter() async {
+    await _authService.twitterSignIn();
+    await reloadProfile();
+  }
+
+  Future<void> signInWithFacebook() async {
+    await _authService.facebookSignIn();
+    await reloadProfile();
+  }
+
   Future<void> signUp(String email, String password, {String? fullName, String? username}) async {
     await _authService.emailSignUp(
       email,

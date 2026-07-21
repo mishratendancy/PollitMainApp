@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import 'dart:io' show Platform;
 import '../../theme/pollit_theme.dart';
 import '../../providers/auth_provider.dart';
 
@@ -86,6 +87,42 @@ class _AuthScreenState extends State<AuthScreen>
     super.dispose();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: PollitColors.accent, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white, 
+                  fontSize: 14, 
+                  fontWeight: FontWeight.w500,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF2C2C2E), // Sleek dark gray
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: PollitColors.cardBorder, width: 1),
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        elevation: 8,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (_isSubmitting) return;
 
@@ -126,12 +163,7 @@ class _AuthScreenState extends State<AuthScreen>
     } catch (e) {
       if (mounted) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.getErrorMessage(e)),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        _showError(authProvider.getErrorMessage(e));
       }
     } finally {
       if (mounted) {
@@ -156,12 +188,82 @@ class _AuthScreenState extends State<AuthScreen>
     } catch (e) {
       if (mounted) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.getErrorMessage(e)),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+        _showError(authProvider.getErrorMessage(e));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<void> _handleTwitterSignIn() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.signInWithTwitter();
+      
+      // Don't navigate manually — pop back to AuthWrapper.
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        _showError(authProvider.getErrorMessage(e));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<void> _handleGithubSignIn() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.signInWithGithub();
+      
+      // Don't navigate manually — pop back to AuthWrapper.
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        _showError(authProvider.getErrorMessage(e));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<void> _handleFacebookSignIn() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.signInWithFacebook();
+      
+      // Don't navigate manually — pop back to AuthWrapper.
+      if (mounted) {
+        HapticFeedback.mediumImpact();
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        _showError(authProvider.getErrorMessage(e));
       }
     } finally {
       if (mounted) {
@@ -666,15 +768,26 @@ class _AuthScreenState extends State<AuthScreen>
                             onTap: _handleGoogleSignIn,
                           ),
                           const SizedBox(height: 12),
-                          _SocialButton(
-                            iconWidget: const Icon(
-                              Icons.facebook_rounded,
-                              color: Color(0xFF1877F2),
-                              size: 24,
+                          if (Platform.isIOS)
+                            _SocialButton(
+                              iconWidget: SvgPicture.asset(
+                                'assets/images/github_logo.svg',
+                                width: 24,
+                                height: 24,
+                              ),
+                              label: 'GitHub',
+                              onTap: _handleGithubSignIn,
+                            )
+                          else
+                            _SocialButton(
+                              iconWidget: const Icon(
+                                Icons.facebook_rounded,
+                                color: Color(0xFF1877F2),
+                                size: 24,
+                              ),
+                              label: 'Facebook',
+                              onTap: _handleFacebookSignIn,
                             ),
-                            label: 'Facebook',
-                            onTap: () {},  // Not implemented yet
-                          ),
                           const SizedBox(height: 12),
                           _SocialButton(
                             iconWidget: SvgPicture.asset(
@@ -683,7 +796,7 @@ class _AuthScreenState extends State<AuthScreen>
                               height: 22,
                             ),
                             label: 'X',
-                            onTap: () {},  // Not implemented yet
+                            onTap: _handleTwitterSignIn,
                           ),
                         ],
                       ),

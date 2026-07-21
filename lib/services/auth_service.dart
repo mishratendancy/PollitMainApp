@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
 class AuthService {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
@@ -139,6 +140,118 @@ class AuthService {
     }
   }
 
+  /// Sign in with GitHub
+  Future<firebase_auth.UserCredential?> githubSignIn() async {
+    try {
+      final githubProvider = firebase_auth.GithubAuthProvider();
+      final userCredential = await _auth.signInWithProvider(githubProvider);
+      final user = userCredential.user;
+
+      // If it's a new user, create their Firestore profile
+      if (user != null && userCredential.additionalUserInfo?.isNewUser == true) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await _db.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'displayName': user.displayName,
+          'photoURL': user.photoURL,
+          'email': user.email,
+          'username': user.email?.split('@').first ?? 'user_${now.toString().substring(5)}',
+          'profileSetupCompleted': false,
+          'inkmarks': 0,
+          'pollsCreated': 0,
+          'communitiesCreated': 0,
+          'followingCount': 0,
+          'voteCount': 0,
+          'createdAt': now,
+        }, SetOptions(merge: true));
+      }
+
+      return userCredential;
+    } catch (e) {
+      debugPrint('Error during GitHub Sign-In: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign in with Twitter (X)
+  Future<firebase_auth.UserCredential?> twitterSignIn() async {
+    try {
+      final twitterProvider = firebase_auth.TwitterAuthProvider();
+      final userCredential = await _auth.signInWithProvider(twitterProvider);
+      final user = userCredential.user;
+
+      // If it's a new user, create their Firestore profile
+      if (user != null && userCredential.additionalUserInfo?.isNewUser == true) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await _db.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'displayName': user.displayName,
+          'photoURL': user.photoURL,
+          'email': user.email,
+          'username': user.email?.split('@').first ?? 'user_${now.toString().substring(5)}',
+          'profileSetupCompleted': false,
+          'inkmarks': 0,
+          'pollsCreated': 0,
+          'communitiesCreated': 0,
+          'followingCount': 0,
+          'voteCount': 0,
+          'createdAt': now,
+        }, SetOptions(merge: true));
+      }
+
+      return userCredential;
+    } catch (e) {
+      debugPrint('Error during Twitter Sign-In: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign in with Facebook
+  Future<firebase_auth.UserCredential?> facebookSignIn() async {
+    try {
+      final LoginResult result = await FacebookAuth.instance.login(
+        loginTracking: LoginTracking.enabled,
+      );
+      
+      debugPrint("Status: ${result.status}");
+      debugPrint("Access Token: ${result.accessToken?.tokenString}");
+      debugPrint("Access Token Type: ${result.accessToken?.type}");
+      
+      if (result.status == LoginStatus.success) {
+        final AccessToken accessToken = result.accessToken!;
+        final firebase_auth.AuthCredential credential = firebase_auth.FacebookAuthProvider.credential(accessToken.tokenString);
+        
+        final userCredential = await _auth.signInWithCredential(credential);
+        final user = userCredential.user;
+        
+        // If it's a new user, create their Firestore profile
+        if (user != null && userCredential.additionalUserInfo?.isNewUser == true) {
+          final now = DateTime.now().millisecondsSinceEpoch;
+          await _db.collection('users').doc(user.uid).set({
+            'uid': user.uid,
+            'displayName': user.displayName,
+            'photoURL': user.photoURL,
+            'email': user.email,
+            'username': user.email?.split('@').first ?? 'user_${now.toString().substring(5)}',
+            'profileSetupCompleted': false,
+            'inkmarks': 0,
+            'pollsCreated': 0,
+            'communitiesCreated': 0,
+            'followingCount': 0,
+            'voteCount': 0,
+            'createdAt': now,
+          }, SetOptions(merge: true));
+        }
+
+        return userCredential;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error during Facebook Sign-In: $e');
+      rethrow;
+    }
+  }
+
   /// Send password reset email
   Future<void> sendPasswordReset(String email) async {
     return await _auth.sendPasswordResetEmail(email: email.trim());
@@ -147,6 +260,7 @@ class AuthService {
   /// Log out
   Future<void> logout() async {
     await Future.wait([
+      FacebookAuth.instance.logOut(),
       _googleSignIn.signOut(),
       _auth.signOut(),
     ]);
@@ -170,6 +284,8 @@ class AuthService {
           return 'Too many attempts. Please try again in 15–30 minutes.';
         case 'operation-not-allowed':
           return 'Email/password sign-in is disabled in Firebase.';
+        case 'account-exists-with-different-credential':
+          return 'An account already exists with the same email. Please sign in using Google or Email.';
         default:
           return error.message ?? 'Something went wrong. Please try again.';
       }

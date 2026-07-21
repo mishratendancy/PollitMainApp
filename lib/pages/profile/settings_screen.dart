@@ -171,15 +171,8 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildSettingsCard({required List<Widget> children}) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: PollitColors.surfaceLight,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: children,
-      ),
+    return Column(
+      children: children,
     );
   }
 
