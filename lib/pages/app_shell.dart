@@ -35,6 +35,7 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       backgroundColor: PollitColors.background,
       extendBody: true, // Float over content
+      resizeToAvoidBottomInset: false, // Don't push up the bottom nav bar
       body: NotificationListener<UserScrollNotification>(
         onNotification: (notification) {
           if (notification.direction == ScrollDirection.forward) {

@@ -329,9 +329,11 @@ class FirestoreService {
     required String pollId,
     required String optionText,
     required String uid,
+    String? pollCreatorUid,
   }) async {
     if (optionText.trim().isEmpty) return null;
     
+    final batch = _db.batch();
     final optionRef = _db
         .collection('communities')
         .doc(communitySlug)
@@ -340,12 +342,14 @@ class FirestoreService {
         .collection('options')
         .doc();
         
-    await optionRef.set({
+    batch.set(optionRef, {
       'text': optionText.trim(),
       'voteCount': 0,
+      'creatorUid': pollCreatorUid ?? uid,
       'addedByUid': uid,
     });
     
+    await batch.commit();
     return optionRef.id;
   }
 

@@ -14,9 +14,11 @@ class PollDetailScreen extends StatelessWidget {
   const PollDetailScreen({
     super.key,
     required this.pollData,
+    this.scrollToComments = false,
   });
 
   final PollViewData pollData;
+  final bool scrollToComments;
 
   @override
   Widget build(BuildContext context) {
@@ -25,37 +27,109 @@ class PollDetailScreen extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => PollDetailProvider(
         communitySlug: pollData.poll.community,
-        pollId: pollData.poll.id,
+        pollId: pollId,
         currentUid: authProvider.user?.uid,
         initialData: pollData,
       ),
-      child: const _PollDetailScreenBody(),
+      child: _PollDetailScreenBody(scrollToComments: scrollToComments),
     );
   }
+
+  String get pollId => pollData.poll.id;
 }
 
 class _PollDetailScreenBody extends StatefulWidget {
-  const _PollDetailScreenBody();
+  const _PollDetailScreenBody({this.scrollToComments = false});
+
+  final bool scrollToComments;
 
   @override
   State<_PollDetailScreenBody> createState() => _PollDetailScreenBodyState();
 }
 
 class _PollDetailScreenBodyState extends State<_PollDetailScreenBody> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _commentsHeaderKey = GlobalKey();
   final TextEditingController _commentController = TextEditingController();
   final FocusNode _commentFocusNode = FocusNode();
   String? _replyingToCommentId;
   String? _replyingToAuthorName;
+  bool _isSubmittingComment = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final routeAnimation = ModalRoute.of(context)?.animation;
+      if (routeAnimation != null) {
+        if (routeAnimation.isCompleted) {
+          if (widget.scrollToComments) _scheduleScrollToComments();
+        } else {
+          void listener(AnimationStatus status) {
+            if (status == AnimationStatus.completed) {
+              routeAnimation.removeStatusListener(listener);
+              if (widget.scrollToComments) _scheduleScrollToComments();
+            }
+          }
+          routeAnimation.addStatusListener(listener);
+        }
+      } else if (widget.scrollToComments) {
+        _scheduleScrollToComments();
+      }
+    });
+
+    // Removed auto-scroll on focus to match standard app UX
+    // (letting the list naturally resize when keyboard appears)
+  }
+
+  void _scheduleScrollToComments({int attempt = 0, double alignment = 0.0}) {
+    if (!mounted) return;
+    if (_commentsHeaderKey.currentContext != null) {
+      Scrollable.ensureVisible(
+        _commentsHeaderKey.currentContext!,
+        alignment: alignment,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    } else if (attempt < 5) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) _scheduleScrollToComments(attempt: attempt + 1, alignment: alignment);
+      });
+    }
+  }
 
   void _submitComment() async {
-    final provider = Provider.of<PollDetailProvider>(context, listen: false);
-    await provider.postComment(_commentController.text, parentId: _replyingToCommentId);
-    _commentController.clear();
+    if (_isSubmittingComment) return;
+
     setState(() {
-      _replyingToCommentId = null;
-      _replyingToAuthorName = null;
+      _isSubmittingComment = true;
     });
-    _commentFocusNode.unfocus();
+
+    try {
+      final provider = Provider.of<PollDetailProvider>(context, listen: false);
+      await provider.postComment(_commentController.text, parentId: _replyingToCommentId);
+      _commentController.clear();
+      if (mounted) {
+        setState(() {
+          _replyingToCommentId = null;
+          _replyingToAuthorName = null;
+        });
+        _commentFocusNode.unfocus();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to post comment. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingComment = false;
+        });
+      }
+    }
   }
 
   void _setReplyTarget(String commentId, String authorName) {
@@ -68,6 +142,7 @@ class _PollDetailScreenBodyState extends State<_PollDetailScreenBody> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _commentController.dispose();
     _commentFocusNode.dispose();
     super.dispose();
@@ -95,20 +170,37 @@ class _PollDetailScreenBodyState extends State<_PollDetailScreenBody> {
         iconTheme: const IconThemeData(color: PollitColors.textPrimary),
         title: const Text('Post', style: TextStyle(color: PollitColors.textPrimary)),
       ),
-      body: Column(
-        children: [
+      body: RepaintBoundary(
+        child: Column(
+          children: [
+          // 1. Scrollable List Body
           Expanded(
-            child: ListView(
-              children: [
-                if (provider.pollData != null)
-                  PollCard(
-                    pollData: provider.pollData!,
-                    firestoreService: FirestoreService(),
-                  ),
+            child: GestureDetector(
+              onTap: () => FocusScope.of(context).unfocus(),
+              behavior: HitTestBehavior.translucent,
+              child: ListView(
+                controller: _scrollController,
+                padding: const EdgeInsets.only(
+                  bottom: 100, // Reduced padding, rely on Scaffold's resizeToAvoidBottomInset
+                ),
+                children: [
+                  if (provider.pollData != null)
+                    PollCard(
+                      pollData: provider.pollData!,
+                      firestoreService: FirestoreService(),
+                      isDetailView: true,
+                      onCommentTap: () {
+                        _scheduleScrollToComments();
+                        if (!_commentFocusNode.hasFocus) {
+                          _commentFocusNode.requestFocus();
+                        }
+                      },
+                    ),
                 const Divider(color: PollitColors.cardBorder, thickness: 1),
                 
                 // Comments Section
                 Padding(
+                  key: _commentsHeaderKey,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Text(
                     'Comments',
@@ -140,102 +232,107 @@ class _PollDetailScreenBodyState extends State<_PollDetailScreenBody> {
                     depth: 0,
                   );
                 }),
-                const SizedBox(height: 32), // bottom padding
+                const SizedBox(height: 16),
               ],
             ),
           ),
+        ),
           
-          // Comment Input
-          ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).padding.bottom + 12,
-                  top: 12,
-                  left: 16,
-                  right: 16,
-                ),
-                decoration: BoxDecoration(
-                  color: PollitColors.surface.withValues(alpha: 0.85),
-                  border: const Border(top: BorderSide(color: PollitColors.cardBorder, width: 0.5)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_replyingToAuthorName != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Row(
-                          children: [
-                            Text(
-                              'Replying to $_replyingToAuthorName',
-                              style: const TextStyle(color: PollitColors.accent, fontSize: 13, fontWeight: FontWeight.bold),
-                            ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _replyingToCommentId = null;
-                                  _replyingToAuthorName = null;
-                                });
-                              },
-                              child: const Icon(Icons.close, size: 16, color: PollitColors.textMuted),
-                            ),
-                          ],
-                        ),
+          // 2. Fixed Comment Input Bar with zero-lag SafeArea
+          SafeArea(
+            top: false,
+            maintainBottomViewPadding: true, // Prevents a jerky jump at the very end of keyboard dismiss
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: const BoxDecoration(
+                color: PollitColors.surface,
+                border: Border(top: BorderSide(color: PollitColors.cardBorder, width: 0.5)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_replyingToAuthorName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Replying to $_replyingToAuthorName',
+                            style: const TextStyle(color: PollitColors.accent, fontSize: 13, fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _replyingToCommentId = null;
+                                _replyingToAuthorName = null;
+                              });
+                            },
+                            child: const Icon(Icons.close, size: 16, color: PollitColors.textMuted),
+                          ),
+                        ],
                       ),
-                    TextField(
-                      controller: _commentController,
-                      focusNode: _commentFocusNode,
-                      style: const TextStyle(color: PollitColors.textPrimary, fontSize: 15),
-                      decoration: InputDecoration(
-                        hintText: 'Add a comment...',
-                        hintStyle: const TextStyle(color: PollitColors.textMuted, fontSize: 15),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: const BorderSide(color: PollitColors.cardBorder, width: 1),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: const BorderSide(color: PollitColors.cardBorder, width: 1),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: const BorderSide(color: PollitColors.accent, width: 1),
-                        ),
-                        filled: true,
-                        fillColor: PollitColors.surfaceLight.withValues(alpha: 0.3),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                          valueListenable: _commentController,
-                          builder: (context, value, child) {
-                            final hasText = value.text.trim().isNotEmpty;
-                            return GestureDetector(
-                              onTap: hasText ? _submitComment : null,
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Icon(
-                                  Icons.send_rounded,
-                                  color: hasText ? PollitColors.accent : PollitColors.textMuted,
-                                  size: 24,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      maxLines: 4,
-                      minLines: 1,
                     ),
-                  ],
-                ),
+                  TextField(
+                    controller: _commentController,
+                    focusNode: _commentFocusNode,
+                    style: const TextStyle(color: PollitColors.textPrimary, fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText: 'Add a comment...',
+                      hintStyle: const TextStyle(color: PollitColors.textMuted, fontSize: 15),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: const BorderSide(color: PollitColors.cardBorder, width: 1),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: const BorderSide(color: PollitColors.cardBorder, width: 1),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: const BorderSide(color: PollitColors.accent, width: 1),
+                      ),
+                      filled: true,
+                      fillColor: PollitColors.surfaceLight.withValues(alpha: 0.3),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _commentController,
+                        builder: (context, value, child) {
+                          final hasText = value.text.trim().isNotEmpty;
+                          return GestureDetector(
+                            onTap: hasText && !_isSubmittingComment ? _submitComment : null,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: _isSubmittingComment
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(12.0),
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: PollitColors.accent),
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.send_rounded,
+                                      color: hasText && !_isSubmittingComment ? PollitColors.accent : PollitColors.textMuted,
+                                      size: 24,
+                                    ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    maxLines: 4,
+                    minLines: 1,
+                  ),
+                ],
               ),
             ),
           ),
         ],
       ),
+    ),
     );
   }
 }

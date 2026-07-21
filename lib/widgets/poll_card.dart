@@ -14,10 +14,14 @@ class PollCard extends StatefulWidget {
     super.key,
     required this.pollData,
     required this.firestoreService,
+    this.isDetailView = false,
+    this.onCommentTap,
   });
 
   final PollViewData pollData;
   final FirestoreService firestoreService;
+  final bool isDetailView;
+  final VoidCallback? onCommentTap;
 
   @override
   State<PollCard> createState() => _PollCardState();
@@ -28,6 +32,7 @@ class _PollCardState extends State<PollCard>
   late final AnimationController _voteAnimController;
   bool _isVoting = false;
   bool _showAddOptionForm = false;
+  bool _isSubmittingOption = false;
   final TextEditingController _addOptionController = TextEditingController();
   int? _commentCount;
 
@@ -153,7 +158,7 @@ class _PollCardState extends State<PollCard>
             ),
           ),
           GestureDetector(
-            onTap: _submitAddOption,
+            onTap: _isSubmittingOption ? null : _submitAddOption,
             behavior: HitTestBehavior.opaque,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -161,14 +166,20 @@ class _PollCardState extends State<PollCard>
                 color: PollitColors.accent,
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: const Text(
-                'Add',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
+              child: _isSubmittingOption
+                  ? const SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                    )
+                  : const Text(
+                      'Add',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -178,13 +189,13 @@ class _PollCardState extends State<PollCard>
 
   Future<void> _submitAddOption() async {
     final text = _addOptionController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isSubmittingOption) return;
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.user == null) return;
 
     setState(() {
-      _showAddOptionForm = false;
+      _isSubmittingOption = true;
     });
 
     try {
@@ -193,6 +204,7 @@ class _PollCardState extends State<PollCard>
         pollId: widget.pollData.poll.id,
         optionText: text,
         uid: auth.user!.uid,
+        pollCreatorUid: widget.pollData.poll.creatorUid,
       );
 
       if (newId != null) {
@@ -206,12 +218,18 @@ class _PollCardState extends State<PollCard>
         if (mounted) {
           setState(() {
             widget.pollData.options.add(newOption);
+            _showAddOptionForm = false;
+            _isSubmittingOption = false;
           });
           _showCustomSnackBar('Option added successfully!');
         }
       }
     } catch (e) {
+      debugPrint('Error adding option: $e');
       if (mounted) {
+        setState(() {
+          _isSubmittingOption = false;
+        });
         _showCustomSnackBar('Failed to add option. Please try again.');
       }
     }
@@ -257,6 +275,34 @@ class _PollCardState extends State<PollCard>
     }
   }
 
+  void _navigateToDetail({bool scrollToComments = false}) {
+    if (widget.isDetailView) return;
+
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            PollDetailScreen(pollData: widget.pollData, scrollToComments: scrollToComments),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 0.05);
+          const end = Offset.zero;
+          final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final slideAnimation = Tween<Offset>(begin: begin, end: end).animate(curve);
+          final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(curve);
+
+          return SlideTransition(
+            position: slideAnimation,
+            child: FadeTransition(
+              opacity: fadeAnimation,
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 250),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _voteAnimController.dispose();
@@ -273,8 +319,10 @@ class _PollCardState extends State<PollCard>
     final hasVoted = votedOptionId != null;
     final poll = widget.pollData.poll;
     
-    final bool optionLimitReached = user != null && 
-        widget.pollData.options.any((o) => o.addedByUid == user.uid);
+    final bool canAddOption = user != null && 
+        !hasVoted && 
+        !(poll.optionLock ?? false) && 
+        !widget.pollData.options.any((o) => o.addedByUid == user.uid);
 
     if (hasVoted && !_isVoting && _voteAnimController.value == 0.0) {
       _voteAnimController.value = 1.0;
@@ -297,9 +345,12 @@ class _PollCardState extends State<PollCard>
     var options = List<PollOption>.from(widget.pollData.options);
     options.sort((a, b) => a.text.compareTo(b.text));
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+    return GestureDetector(
+      onTap: widget.isDetailView ? null : () => _navigateToDetail(scrollToComments: false),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -385,7 +436,7 @@ class _PollCardState extends State<PollCard>
           ),
           
           // Add Option Button
-          if (user != null && !optionLimitReached)
+          if (canAddOption)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: _showAddOptionForm
@@ -438,14 +489,9 @@ class _PollCardState extends State<PollCard>
               _buildFooterButton(
                 icon: Icons.chat_bubble_outline,
                 label: '${_commentCount ?? widget.pollData.poll.commentCount}',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PollDetailScreen(pollData: widget.pollData),
-                    ),
-                  );
-                }
+                onTap: widget.isDetailView
+                    ? widget.onCommentTap
+                    : () => _navigateToDetail(scrollToComments: true),
               ),
               const SizedBox(width: 8),
               _buildFooterButton(
@@ -459,8 +505,9 @@ class _PollCardState extends State<PollCard>
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildFooterButton({required IconData icon, required String label, VoidCallback? onTap}) {
     return GestureDetector(
@@ -533,7 +580,9 @@ class _OptionTile extends StatelessWidget {
                     widthFactor: (percent / 100) * animController.value,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: PollitColors.surfaceLight.withValues(alpha: 0.6),
+                        color: selected 
+                            ? PollitColors.accent.withValues(alpha: 0.15)
+                            : Colors.white.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -546,8 +595,8 @@ class _OptionTile extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               border: Border.all(
-                color: PollitColors.cardBorder,
-                width: 1,
+                color: selected ? PollitColors.accent.withValues(alpha: 0.6) : PollitColors.cardBorder,
+                width: selected ? 1.5 : 1,
               ),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -571,7 +620,7 @@ class _OptionTile extends StatelessWidget {
                     key: ValueKey('$hasVoted$selected'),
                     size: 18,
                     color: selected
-                        ? PollitColors.textPrimary
+                        ? PollitColors.accent
                         : PollitColors.textMuted,
                   ),
                 ),
@@ -579,8 +628,8 @@ class _OptionTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     option.text,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
+                    style: TextStyle(
+                      fontWeight: selected ? FontWeight.bold : FontWeight.w600,
                       fontSize: 14,
                       color: PollitColors.textPrimary,
                     ),

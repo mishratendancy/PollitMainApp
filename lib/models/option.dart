@@ -16,7 +16,7 @@ class PollOption {
       id: id,
       text: map['text'] ?? '',
       voteCount: map['voteCount'] ?? 0,
-      addedByUid: map['addedByUid'],
+      addedByUid: map['addedByUid'] ?? map['creatorUid'],
     );
   }
 
